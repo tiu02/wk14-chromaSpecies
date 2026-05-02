@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ColorPickerSheet from "./components/ColorPickerSheet";
 
 const SUGGESTED = [
   { hex: "#C84B3A", name: "Vermilion" },
@@ -31,6 +32,8 @@ function CrosshairIcon() {
 
 export default function Home() {
   const [previewColor, setPreviewColor] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [pickedColor, setPickedColor] = useState<string | null>(null);
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
@@ -56,10 +59,13 @@ export default function Home() {
           <div className="mt-5 flex items-center gap-3 flex-wrap">
             <button
               type="button"
+              onClick={() => setSheetOpen(true)}
               aria-label="Open color picker"
               className="swatch-trigger inline-flex items-center justify-center w-12 h-12 rounded-md checker ring-dim overflow-hidden"
             >
-              {previewColor ? (
+              {pickedColor ? (
+                <span className="block w-full h-full" style={{ background: pickedColor }} />
+              ) : previewColor ? (
                 <span className="block w-full h-full" style={{ background: previewColor }} />
               ) : (
                 <span className="text-ink-3"><CrosshairIcon /></span>
@@ -68,14 +74,14 @@ export default function Home() {
 
             <span
               className="mono text-[28px] md:text-[36px] whitespace-nowrap"
-              style={{ color: previewColor ? "var(--color-ink)" : "var(--color-ink-4)" }}
+              style={{ color: pickedColor || previewColor ? "var(--color-ink)" : "var(--color-ink-4)" }}
               translate="no"
             >
-              {previewColor ? previewColor.toUpperCase() : "#———————"}
+              {pickedColor || previewColor ? (pickedColor || previewColor)!.toUpperCase() : "#———————"}
             </span>
 
             <span className="label">
-              {previewColor ? "preview" : "click swatch to pick"}
+              {pickedColor ? "your input" : previewColor ? "preview" : "click swatch to pick"}
             </span>
           </div>
 
@@ -83,6 +89,7 @@ export default function Home() {
           <div className="mt-6">
             <button
               type="button"
+              onClick={() => setSheetOpen(true)}
               className="pick-cta px-5 py-3 mono text-[13px] inline-flex items-center gap-2"
             >
               <PencilIcon />
@@ -136,6 +143,10 @@ export default function Home() {
             <button
               key={s.hex}
               type="button"
+              onClick={() => {
+                setPickedColor(s.hex);
+                setSheetOpen(true);
+              }}
               className="swatch-tile aspect-square relative"
               style={{ background: s.hex }}
               aria-label={`${s.name} — ${s.hex}`}
@@ -162,6 +173,14 @@ export default function Home() {
         </div>
         <div className="mono text-[11px] text-ink-3">empty state · 0 of 0</div>
       </div>
+
+      {/* ── Color Picker Sheet ───────────────────────────────────────────── */}
+      <ColorPickerSheet
+        isOpen={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        onColorPick={setPickedColor}
+        pickedColor={pickedColor}
+      />
 
     </main>
   );

@@ -92,7 +92,7 @@ html, body {
   background: var(--color-ink);
   color: var(--color-surface);
   border-radius: 10px;
-  transition: background-color 120ms ease;
+  transition: background-color 120ms ease, transform 120ms ease-out;
 }
 .btn-primary:hover:not(:disabled) { background: #2A2520; }
 .btn-primary:active:not(:disabled) { transform: scale(0.98); }
@@ -101,15 +101,23 @@ html, body {
   color: #FAF7F2;
   cursor: not-allowed;
 }
+.btn-primary:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
 
 .btn-secondary {
   background: var(--color-surface);
   border: 1px solid var(--color-rule-2);
   border-radius: 10px;
-  transition: background-color 120ms ease;
+  transition: background-color 120ms ease, transform 120ms ease-out;
 }
 .btn-secondary:hover { background: var(--color-surface-2); }
 .btn-secondary:active { transform: scale(0.98); }
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
 
 .swatch-trigger {
   cursor: pointer;
@@ -127,7 +135,33 @@ html, body {
   background: var(--color-ink);
   color: var(--color-surface);
   border-radius: 10px;
-  transition: background-color 120ms ease, transform 120ms ease;
+  transition: background-color 120ms ease, transform 120ms ease-out;
 }
 .pick-cta:hover { background: #2A2520; }
 .pick-cta:active { transform: scale(0.98); }
+.pick-cta:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+/* Icon button :active state */
+button[aria-label]:active {
+  transform: scale(0.93);
+  transition: transform 120ms ease-out;
+}
+
+/* Swatch tile :active state */
+.swatch-tile:active {
+  transform: scale(0.97);
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .swatch-tile,
+  .swatch-trigger,
+  .btn-primary,
+  .btn-secondary,
+  .pick-cta {
+    transition: none;
+  }
+}
