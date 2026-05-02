@@ -30,14 +30,68 @@ function CrosshairIcon() {
   );
 }
 
+interface SpecimenData {
+  commonName: string;
+  scientificName: string;
+  family: string;
+  description: string;
+  funFact: string;
+  dominantHex: string;
+  deltaE: number;
+  wikiTitle: string;
+  imageUrl: string | null;
+}
+
+interface MatchResponse {
+  botanical?: SpecimenData;
+  zoological?: SpecimenData;
+  error?: string;
+}
+
 export default function Home() {
   const [previewColor, setPreviewColor] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [pickedColor, setPickedColor] = useState<string | null>(null);
+  const [results, setResults] = useState<{ botanical: SpecimenData; zoological: SpecimenData } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+  const handleMatch = async () => {
+    if (!pickedColor) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hex: pickedColor }),
+      });
+
+      const data = (await res.json()) as MatchResponse;
+
+      if (data.error) {
+        setError("API_ERROR");
+        setResults(null);
+      } else if (data.botanical && data.zoological) {
+        setResults({ botanical: data.botanical, zoological: data.zoological });
+        setError(null);
+      } else {
+        setError("API_ERROR");
+        setResults(null);
+      }
+    } catch (err) {
+      setError("API_ERROR");
+      setResults(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="px-5 lg:px-8 pt-12 pb-24 max-w-[1320px] mx-auto">
@@ -85,8 +139,8 @@ export default function Home() {
             </span>
           </div>
 
-          {/* CTA */}
-          <div className="mt-6">
+          {/* CTA + Match buttons */}
+          <div className="mt-6 flex gap-3 flex-wrap">
             <button
               type="button"
               onClick={() => setSheetOpen(true)}
@@ -95,7 +149,26 @@ export default function Home() {
               <PencilIcon />
               Open color picker
             </button>
+            {pickedColor && (
+              <button
+                type="button"
+                onClick={handleMatch}
+                disabled={loading}
+                className="btn-primary px-5 py-3 mono text-[13px] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Matching…" : "Match specimens"}
+              </button>
+            )}
           </div>
+
+          {/* Error message */}
+          {error && (
+            <div className="mt-4 p-3 rounded-md bg-[#FEF2F2] border border-[#FDCDCE]">
+              <p className="mono text-[13px] text-[#D32F2F]">
+                {error === "API_ERROR" ? "Unable to fetch specimens — try again" : error}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Right col */}
