@@ -1,5 +1,8 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
+import chroma from 'chroma-js';
+
+const DELTA_E_THRESHOLD = 10;
 
 const SYSTEM_PROMPT = `You are a naturalist researcher cross-referencing color science with biological taxonomy.
 Given a target hex color, identify one botanical specimen (flower, plant, or moss) and one
@@ -16,6 +19,11 @@ CONSTRAINTS (non-negotiable):
 - funFact: one sentence. Specific and verifiable. About the species' color biology (pigment
   source, evolutionary purpose, structural coloration, etc.).
 - wikiTitle: exact Wikipedia article title string (e.g. "Vermilion flycatcher") for API lookup.
+- Hue accuracy is mandatory. Blue inputs (hue 200–260°) must return blue specimens — not violet
+  or purple (hue 260–330°). Green inputs must return green specimens — not yellow-green or teal.
+  Verify the specimen's dominant hue falls in the same hue family as the input before responding.
+- dominantHex must reflect the species' actual visible color. Do not estimate — if uncertain,
+  choose a different species whose color you can report accurately.
 
 Return JSON matching the provided schema. No extra keys.`;
 
@@ -62,6 +70,28 @@ const FEW_SHOT_EXAMPLES = [
       dominantHex: '#3B7B8B',
       deltaE: 1.4,
       wikiTitle: 'Malachite kingfisher',
+    },
+  },
+  {
+    botanical: {
+      commonName: 'Himalayan Blue Poppy',
+      scientificName: 'Meconopsis betonicifolia',
+      family: 'Papaveraceae',
+      description: 'A high-altitude poppy native to the Himalayan alpine zone. The petals hold a clear, saturated blue that is rare among flowering plants.',
+      funFact: 'The blue color arises from anthocyanins co-pigmented with flavonoids under alkaline vacuolar pH — the same pigment class that produces red in roses, expressed differently by cellular chemistry.',
+      dominantHex: '#4A8BBE',
+      deltaE: 3.7,
+      wikiTitle: 'Meconopsis betonicifolia',
+    },
+    zoological: {
+      commonName: 'Blue Grosbeak',
+      scientificName: 'Passerina caerulea',
+      family: 'Cardinalidae',
+      description: 'A stocky North American songbird. Adult males are uniformly deep cobalt-blue with two chestnut wing bars visible in flight.',
+      funFact: 'The blue plumage is structural, not pigment-based — melanin granules in the barbules scatter short blue wavelengths while absorbing longer red and green ones, a form of thin-film interference.',
+      dominantHex: '#3E7DBF',
+      deltaE: 2.1,
+      wikiTitle: 'Blue grosbeak',
     },
   },
   {
@@ -161,12 +191,21 @@ async function fetchWikiThumbnail(wikiTitle: string): Promise<string | null> {
   }
 }
 
+function validateDeltaE(
+  targetHex: string,
+  botanical: SpecimenData,
+  zoological: SpecimenData,
+): { valid: boolean; bDE: number; zDE: number } {
+  const bDE = chroma.deltaE(targetHex, botanical.dominantHex);
+  const zDE = chroma.deltaE(targetHex, zoological.dominantHex);
+  return { valid: bDE <= DELTA_E_THRESHOLD && zDE <= DELTA_E_THRESHOLD, bDE, zDE };
+}
+
 export async function POST(request: Request): Promise<Response> {
   try {
     const body = await request.json();
     const { hex } = body as { hex?: string };
 
-    // Validate hex format
     if (!hex || typeof hex !== 'string' || !/^#[0-9A-Fa-f]{6}$/i.test(hex)) {
       return NextResponse.json({ error: 'INVALID_HEX' }, { status: 400 });
     }
@@ -188,36 +227,39 @@ export async function POST(request: Request): Promise<Response> {
       systemInstruction: SYSTEM_PROMPT,
     });
 
-    const result = await model.generateContent([
-      {
-        text: `Here are reference examples:\n${JSON.stringify(FEW_SHOT_EXAMPLES, null, 2)}`,
-      },
-      {
-        text: `Match specimens for hex: ${hex.toUpperCase()}`,
-      },
-    ]);
-
-    const responseText = result.response.text();
-    const parsedResponse = JSON.parse(responseText) as {
-      botanical: SpecimenData;
-      zoological: SpecimenData;
+    const callGemini = async (extraInstruction?: string) => {
+      const contents = [
+        { text: `Here are reference examples:\n${JSON.stringify(FEW_SHOT_EXAMPLES, null, 2)}` },
+        { text: `Match specimens for hex: ${hex.toUpperCase()}${extraInstruction ? '\n\n' + extraInstruction : ''}` },
+      ];
+      const result = await model.generateContent(contents);
+      return JSON.parse(result.response.text()) as { botanical: SpecimenData; zoological: SpecimenData };
     };
 
-    // Fetch Wikipedia thumbnails in parallel
+    let parsed = await callGemini();
+
+    const { valid, bDE, zDE } = validateDeltaE(hex, parsed.botanical, parsed.zoological);
+    if (!valid) {
+      const violations = [
+        bDE > DELTA_E_THRESHOLD
+          ? `Botanical dominant color ${parsed.botanical.dominantHex} has ΔE ${bDE.toFixed(1)} from target — exceeds tolerance. Find a closer botanical match.`
+          : '',
+        zDE > DELTA_E_THRESHOLD
+          ? `Zoological dominant color ${parsed.zoological.dominantHex} has ΔE ${zDE.toFixed(1)} from target — exceeds tolerance. Find a closer zoological match.`
+          : '',
+      ].filter(Boolean).join(' ');
+
+      parsed = await callGemini(`CORRECTION NEEDED: ${violations}`);
+    }
+
     const [botanicalImg, zoologicalImg] = await Promise.all([
-      fetchWikiThumbnail(parsedResponse.botanical.wikiTitle),
-      fetchWikiThumbnail(parsedResponse.zoological.wikiTitle),
+      fetchWikiThumbnail(parsed.botanical.wikiTitle),
+      fetchWikiThumbnail(parsed.zoological.wikiTitle),
     ]);
 
     const response: MatchResponse = {
-      botanical: {
-        ...parsedResponse.botanical,
-        imageUrl: botanicalImg,
-      },
-      zoological: {
-        ...parsedResponse.zoological,
-        imageUrl: zoologicalImg,
-      },
+      botanical: { ...parsed.botanical, imageUrl: botanicalImg },
+      zoological: { ...parsed.zoological, imageUrl: zoologicalImg },
     };
 
     return NextResponse.json(response);

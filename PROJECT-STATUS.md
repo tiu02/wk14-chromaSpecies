@@ -26,14 +26,40 @@
 - **Tested** — curl POST `#C84B3A` (Vermilion → Oriental Poppy + Summer Tanager) and `#3A7A8A` (Teal → Blue Chalk Sticks + Malachite Kingfisher) both return specimens with Wikipedia image URLs; build passes
 - **No ΔE validation yet** — route returns best Gemini result regardless; `chroma.deltaE()` + auto-retry deferred to Commit 5
 
+### Results State + ΔE Validation — Commit 5: Complete
+- **`app/api/match/route.ts`** — added `chroma-js` import + `DELTA_E_THRESHOLD = 10`; extracted `callGemini()` helper; `validateDeltaE()` computes `chroma.deltaE()` for both specimens; one auto-retry fires when either ΔE exceeds 10, appending `CORRECTION NEEDED: {violation feedback}` to user content; result returned regardless (best effort); cost ceiling: 2 Gemini calls max per request
+- **`app/components/SpecimenCard.tsx`** — new Client Component; header (eyebrow + ΔE pill with tooltip + Wikipedia arrow link); H2 common name (26px); scientific + family mono italic; `aspect-[7/5]` image with real Wikipedia thumbnail or "No image available" fallback; description (14.5px); "Color biology" fun fact section (border-t); dominant color footer (swatch + hex + RGB + "verified" pill); `card-enter` animation class with `animationDelay` prop for 80ms stagger
+- **`app/page.tsx`** — hero H1 toggles "Pick a color." / "Match found."; eyebrow toggles session / specimen labels; swatch trigger resizes (48→36px) in results state; CTA button label toggles "Open color picker" / "Edit color"; status dot fills with `pickedColor` in results state with color-matched ring; `hasActivity` gate controls results section vs. suggested swatches; toolbar row with "Specimens · 2", "Avg ΔE · {avg}", "Source · Wikimedia / Kew" pills; card grid `grid-cols-12` with `col-span-12 md:col-span-6` cards; loading skeleton (two card-shaped placeholders with shimmer); `MATCH_FAILED` inline error in card slots; footer text updates for results state
+- **`app/globals.css`** — added: `@keyframes card-enter` (translateY 8px→0, opacity, 280ms); `.card-enter` class; `@keyframes shimmer` (translateX sweep, 1.4s linear); `.skeleton-shimmer` + `::after` pseudo for shimmer overlay; `@keyframes btn-pulse` (opacity 60–100%, 600ms); `.btn-loading` class; `prefers-reduced-motion` overrides for all three animations
+- **Build** — `npm run build` clean; TypeScript passes; all routes compile
+
+### ColorPickerSheet UI Pass — This Session: Complete
+- **Icons** — `lucide-react` installed; replaced all custom SVGs with `Shuffle`, `Pipette`, `ChevronDown`, `X` from lucide-react (consistent 1.5px stroke, tree-shakeable)
+- **Hex field** — "Hex" label moved inside the `.field` div (stacked label/input pattern matching channel cards); color swatch repositioned `absolute right-4 top-1/2 -translate-y-1/2` (40×40px) so it stays vertically centered regardless of label height; `pr-14` added to input row to prevent text overlap
+- **Format control** — replaced click-to-cycle button with custom-styled dropdown: `.field` trigger with `ChevronDown` (rotates 180° on open), white popover with `E7E3D9` border and elevation shadow, `.format-option` CSS class with 80ms hover transition, `ECE7DA` selected state; closes on outside click and Escape
+- **Format options** — changed from `["HEX", "RGB", "HSL"]` to `["RGB", "HSL", "HSB"]`; added `hslToHSB()` conversion function; channel display renders Hue/Sat/Bright for HSB mode
+- **Default gray** — removed all empty/no-color states; `DEFAULT_GRAY = "#A8A39A"` (matches `--color-ink-4`); `GRAY_HSL` computed at module scope; sheet initializes with gray and resets to it when opened without a `pickedColor`; HSL plane cursor always visible; hex swatch always shows color
+- **Input field hover/active** — removed broad `button[aria-label]:active { transform: scale(0.93) }` rule from globals.css; static `.field` display cards have no interactive states
+- **Hue strip labels** — removed `0°` / `drag the marker to set hue` / `360°` label row
+- **Build** — `npm run build` clean; `tsc --noEmit` clean; TypeScript passes
+
+### UX Fixes (post-Commit 5, this session): Complete
+- **Tooltip** — replaced `title` attribute on ΔE pill with `.de-tooltip` / `.de-tooltip-content` CSS class pair; triggers on hover and `:focus-within`; 120ms opacity transition; `role="tooltip"` on content div
+- **ΔE tooltip copy** — updated to "Lower = closer match · <2 imperceptible · ≤10 within tolerance · >10 outside range"
+- **Status sub-text** — `D65 · 2° · ΔE tolerance 10` → `Daylight D65 · 2° observer · max ΔE 10`; `title` attribute on element with full technical expansion on hover
+- **Blue hue mismatch** — added 4th few-shot example (Himalayan Blue Poppy + Blue Grosbeak, target ~#4080C8); system prompt tightened with explicit hue-family accuracy constraint (blue ≠ violet/purple) and `dominantHex` accuracy requirement
+- **"verified" pill** — now conditional: `"within tolerance"` (standard pill) when `deltaE ≤ 10`; `"outside tolerance"` (muted style, `--color-ink-3` text) when not
+- **Build** — `npm run build` clean; TypeScript passes
+
 --
 
 # Known Issues
 - HSL plane gradient only adjusts lightness axis; a full SL-plane gradient (black/white corners) is not yet implemented. Color accuracy is approximate — correctable in Commit 6 polish pass if needed.
-- `format` dropdown state currently controls display-only fields; hex input is the authoritative editing field. RGB triple is read-only (display derived from `currentHex`). This matches the spec intent.
+- `format` dropdown: RGB/HSL/HSB values are read-only display (derived from HSL state). Hex input is the authoritative editing field. This matches spec intent.
 - `RESPONSE_SCHEMA` uses `as any` cast to satisfy strict TypeScript typing in the `@google/generative-ai` 0.24.1 SDK — the literal schema object is otherwise typed as `readonly` and conflicts with the mutable `string[]` required by the SDK's `ObjectSchema.required` field.
+- **Blue hue mismatch (partial fix):** System prompt tightened + blue few-shot example added. However, ΔE validation checks Gemini's self-reported `dominantHex`, not the specimen's actual visual color — if Gemini misreports `dominantHex`, validation passes even for a wrong match. Prompt-level mitigation only; full fix would require server-side image color analysis.
 
 --
 
 ## Next Steps
-1. Start Commit 5: Results State + ΔE Validation.
+1. Start Commit 6: A11y + Motion Polish.
