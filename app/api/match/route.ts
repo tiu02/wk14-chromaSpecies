@@ -174,6 +174,17 @@ interface MatchResponse {
   error?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
+const model = genAI.getGenerativeModel({
+  model: 'gemini-2.5-flash',
+  generationConfig: {
+    responseMimeType: 'application/json',
+    responseSchema: RESPONSE_SCHEMA as any,
+  },
+  systemInstruction: SYSTEM_PROMPT,
+});
+
 async function fetchWikiThumbnail(wikiTitle: string): Promise<string | null> {
   try {
     const encoded = encodeURIComponent(wikiTitle.replace(/ /g, '_'));
@@ -210,22 +221,10 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json({ error: 'INVALID_HEX' }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    if (!process.env.GEMINI_API_KEY) {
       console.error('GEMINI_API_KEY not set');
       return NextResponse.json({ error: 'API_ERROR' }, { status: 500 });
     }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: RESPONSE_SCHEMA as any,
-      },
-      systemInstruction: SYSTEM_PROMPT,
-    });
 
     const callGemini = async (extraInstruction?: string) => {
       const contents = [

@@ -3,17 +3,11 @@
 import { useState } from "react";
 import ColorPickerSheet from "./components/ColorPickerSheet";
 import SpecimenCard, { type SpecimenData } from "./components/SpecimenCard";
+import { COLOR_PRESETS } from "./lib/presets";
 
-const SUGGESTED = [
-  { hex: "#C84B3A", name: "Vermilion" },
-  { hex: "#E8A33B", name: "Saffron" },
-  { hex: "#D8C45E", name: "Mustard" },
-  { hex: "#7AB58C", name: "Sage" },
-  { hex: "#3A7A8A", name: "Teal" },
-  { hex: "#5C5BA8", name: "Iris" },
-  { hex: "#A8688E", name: "Rose Quartz" },
-  { hex: "#6E5239", name: "Walnut" },
-] as const;
+const _sessionStart = new Date();
+const SESSION_DATE = _sessionStart.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
+const SESSION_TIME = _sessionStart.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 
 interface MatchResults {
   botanical: SpecimenData;
@@ -71,11 +65,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<"MATCH_FAILED" | "API_ERROR" | null>(null);
 
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
-  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
-
   const hasActivity = loading || !!results || error === "MATCH_FAILED";
+  const displayColor = pickedColor ?? previewColor;
   const avgDeltaE = results
     ? ((results.botanical.deltaE + results.zoological.deltaE) / 2).toFixed(1)
     : null;
@@ -104,7 +95,6 @@ export default function Home() {
 
       if (data.botanical && data.zoological) {
         setResults({ botanical: data.botanical, zoological: data.zoological });
-        setError(null);
       } else if (data.error === "MATCH_FAILED") {
         setError("MATCH_FAILED");
       } else {
@@ -118,17 +108,17 @@ export default function Home() {
   };
 
   return (
-    <main className="px-5 lg:px-8 pt-12 pb-24 max-w-[1320px] mx-auto">
+    <main className="px-4 sm:px-5 lg:px-8 pt-8 md:pt-12 pb-16 md:pb-24 max-w-330 mx-auto">
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="grid grid-cols-12 gap-8 mb-10">
+      <section className="grid grid-cols-12 gap-6 md:gap-8 mb-8 md:mb-10">
 
         {/* Left col */}
         <div className="col-span-12 md:col-span-7">
           <div className="label mb-2">
             {results
-              ? <>Specimen Card 0247.A · Session <time dateTime={now.toISOString()}>{dateStr} · {timeStr}</time></>
-              : <>New session · <time dateTime={now.toISOString()}>{dateStr} · {timeStr}</time></>
+              ? <>Specimen Card 0247.A · Session <time dateTime={_sessionStart.toISOString()}>{SESSION_DATE} · {SESSION_TIME}</time></>
+              : <>New session · <time dateTime={_sessionStart.toISOString()}>{SESSION_DATE} · {SESSION_TIME}</time></>
             }
           </div>
 
@@ -145,10 +135,8 @@ export default function Home() {
               className="swatch-trigger inline-flex items-center justify-center rounded-md checker ring-dim overflow-hidden"
               style={{ width: results ? 36 : 48, height: results ? 36 : 48 }}
             >
-              {pickedColor ? (
-                <span className="block w-full h-full" style={{ background: pickedColor }} />
-              ) : previewColor ? (
-                <span className="block w-full h-full" style={{ background: previewColor }} />
+              {displayColor ? (
+                <span className="block w-full h-full" style={{ background: displayColor }} />
               ) : (
                 <span className="text-ink-3"><CrosshairIcon /></span>
               )}
@@ -156,10 +144,10 @@ export default function Home() {
 
             <span
               className="mono text-[28px] md:text-[36px] whitespace-nowrap"
-              style={{ color: pickedColor || previewColor ? "var(--color-ink)" : "var(--color-ink-4)" }}
+              style={{ color: displayColor ? "var(--color-ink)" : "var(--color-ink-4)" }}
               translate="no"
             >
-              {pickedColor || previewColor ? (pickedColor || previewColor)!.toUpperCase() : "#———————"}
+              {displayColor ? displayColor.toUpperCase() : "#———————"}
             </span>
 
             <span className="label">
@@ -293,18 +281,18 @@ export default function Home() {
       {/* ── Suggested swatches (empty state only) ────────────────────────── */}
       {!hasActivity && (
         <section>
-          <div className="flex items-end justify-between mb-3">
+          <div className="flex items-end justify-between flex-wrap gap-y-1 mb-3">
             <div>
               <div className="label mb-1">Start from a suggestion</div>
               <h3 className="text-[18px] tracking-tight font-semibold text-ink">
                 Common dominant hues
               </h3>
             </div>
-            <div className="mono text-[11px] text-ink-3">8 presets · click to seed picker</div>
+            <div className="mono text-[11px] text-ink-3 hidden sm:block">8 presets · click to seed picker</div>
           </div>
 
           <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
-            {SUGGESTED.map((s) => (
+            {COLOR_PRESETS.map((s) => (
               <button
                 key={s.hex}
                 type="button"
@@ -333,7 +321,7 @@ export default function Home() {
       )}
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
-      <div className="mt-12 flex items-center justify-between">
+      <div className="mt-10 md:mt-12 flex items-center justify-between flex-wrap gap-y-1">
         <div className="mono text-[11px] text-ink-3">
           {results
             ? "Specimen match complete · re-pick to run again"

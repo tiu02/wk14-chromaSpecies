@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Shuffle, Pipette, ChevronDown, X } from "lucide-react";
+import { COLOR_PRESETS } from "../lib/presets";
 
 export interface ColorPickerSheetProps {
   isOpen: boolean;
@@ -12,16 +13,6 @@ export interface ColorPickerSheetProps {
   pickedColor: string | null;
 }
 
-const PRESETS = [
-  { hex: "#C84B3A", name: "Vermilion" },
-  { hex: "#E8A33B", name: "Saffron" },
-  { hex: "#D8C45E", name: "Mustard" },
-  { hex: "#7AB58C", name: "Sage" },
-  { hex: "#3A7A8A", name: "Teal" },
-  { hex: "#5C5BA8", name: "Iris" },
-  { hex: "#A8688E", name: "Rose Quartz" },
-  { hex: "#6E5239", name: "Walnut" },
-];
 
 const FORMATS = ["RGB", "HSL", "HSB"] as const;
 type Format = typeof FORMATS[number];
@@ -161,7 +152,7 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
       }
       if (e.code === "Space" && document.activeElement?.tagName !== "INPUT") {
         e.preventDefault();
-        const preset = PRESETS[Math.floor(Math.random() * PRESETS.length)];
+        const preset = COLOR_PRESETS[Math.floor(Math.random() * COLOR_PRESETS.length)];
         const { h, s, l } = hexToHSL(preset.hex);
         setHue(h); setSaturation(s); setLightness(l);
         setHexInput(preset.hex.toUpperCase());
@@ -260,7 +251,7 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
   };
 
   const handleShuffle = () => {
-    const preset = PRESETS[Math.floor(Math.random() * PRESETS.length)];
+    const preset = COLOR_PRESETS[Math.floor(Math.random() * COLOR_PRESETS.length)];
     const { h, s, l } = hexToHSL(preset.hex);
     setHue(h); setSaturation(s); setLightness(l);
     setHexInput(preset.hex.toUpperCase());
@@ -275,7 +266,7 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
     onClose();
   };
 
-  const supportsEyedropper = mounted && typeof window !== "undefined" && "EyeDropper" in window;
+  const supportsEyedropper = mounted && "EyeDropper" in window;
 
   const sheet = mounted ? createPortal(
     <>
@@ -317,10 +308,10 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
         <div style={{ width: 44, height: 4, borderRadius: 4, background: "#D9D4CA", margin: "8px auto 0" }} />
 
         {/* Inner content */}
-        <div className="max-w-330 mx-auto px-6 lg:px-10 pt-4 pb-6">
+        <div className="max-w-330 mx-auto px-4 sm:px-6 lg:px-10 pt-4 pb-6">
 
           {/* Header */}
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between flex-wrap gap-y-2 mb-5">
             <div className="flex items-center gap-3">
               <h3 id="sheet-title" className="text-[20px] font-semibold tracking-tight text-ink">
                 {pickedColor ? "Edit color" : "Pick a color"}
