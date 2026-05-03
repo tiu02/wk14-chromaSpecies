@@ -94,12 +94,15 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
   const [formatOpen, setFormatOpen] = useState(false);
   const [flashSpace, setFlashSpace] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [pulseKey, setPulseKey] = useState(0);
+  const [willChange, setWillChange] = useState(false);
 
   const planeRef = useRef<HTMLDivElement>(null);
   const hueTrackRef = useRef<HTMLDivElement>(null);
   const focusTrapRef = useRef<HTMLDivElement>(null);
   const formatDropRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const hasBeenOpenedRef = useRef(false);
 
   const currentHex = hexInput.length === 7 && /^#[0-9A-F]{6}$/i.test(hexInput)
     ? hexInput.toUpperCase()
@@ -113,19 +116,25 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
   // Sync from pickedColor (or reset to gray) when sheet opens
   useEffect(() => {
     if (isOpen) {
+      hasBeenOpenedRef.current = true;
       const source = pickedColor ?? DEFAULT_GRAY;
       const { h, s, l } = hexToHSL(source);
       setHue(h); setSaturation(s); setLightness(l);
       setHexInput(source.toUpperCase());
       openerRef.current = document.activeElement as HTMLElement;
+      setPulseKey(k => k + 1);
+      setWillChange(true);
     }
   }, [isOpen, pickedColor]);
 
-  // Return focus on close
+  // Return focus on close; trigger will-change for exit transition
   useEffect(() => {
-    if (!isOpen && openerRef.current) {
-      openerRef.current.focus();
-      openerRef.current = null;
+    if (!isOpen) {
+      if (hasBeenOpenedRef.current) setWillChange(true);
+      if (openerRef.current) {
+        openerRef.current.focus();
+        openerRef.current = null;
+      }
     }
   }, [isOpen]);
 
@@ -272,6 +281,7 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
     <>
       {/* Backdrop */}
       <div
+        className="sheet-backdrop"
         onClick={onClose}
         aria-hidden="true"
         style={{
@@ -279,7 +289,7 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
           background: "rgba(25,22,19,0.18)",
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? "auto" : "none",
-          transition: `opacity ${isOpen ? "240ms" : "160ms"} ease`,
+          transition: `opacity ${isOpen ? "240ms" : "160ms"} ease-out`,
         }}
       />
 
@@ -289,6 +299,8 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
         role="dialog"
         aria-modal="true"
         aria-labelledby="sheet-title"
+        className="sheet-panel"
+        onTransitionEnd={() => setWillChange(false)}
         style={{
           position: "fixed", insetInline: 0, bottom: 0, zIndex: 50,
           background: "#FFFFFF",
@@ -296,6 +308,7 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
           boxShadow: "0 -1px 0 #E7E3D9, 0 -2px 6px rgba(25,22,19,0.04), 0 -30px 60px -30px rgba(25,22,19,0.18)",
           transform: isOpen ? "translateY(0)" : "translateY(100%)",
           transition: `transform ${isOpen ? "320ms cubic-bezier(0.22,1,0.36,1)" : "200ms cubic-bezier(0.22,1,0.36,1)"}`,
+          willChange: willChange ? "transform" : "auto",
           overscrollBehavior: "contain",
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
@@ -319,7 +332,7 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
                 <button
                   type="button"
                   onClick={handleEyedropper}
-                  className="btn-secondary px-2.5 py-1.5 mono text-[11px] flex items-center gap-1.5"
+                  className="btn-secondary btn-icon min-w-11 min-h-11 px-2.5 mono text-[11px] flex items-center justify-center gap-1.5"
                   aria-label="Pick color from screen"
                 >
                   <Pipette size={13} aria-hidden="true" />
@@ -329,7 +342,7 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
               <button
                 type="button"
                 onClick={handleShuffle}
-                className="btn-secondary px-2.5 py-1.5 mono text-[11px] flex items-center gap-1.5"
+                className="btn-secondary btn-icon min-w-11 min-h-11 px-2.5 mono text-[11px] flex items-center justify-center gap-1.5"
                 aria-label="Shuffle to random preset"
               >
                 <Shuffle size={13} aria-hidden="true" />
@@ -348,7 +361,7 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
               <button
                 type="button"
                 onClick={onClose}
-                className="btn-secondary p-1.5"
+                className="btn-secondary btn-icon min-w-11 min-h-11 flex items-center justify-center"
                 aria-label="Close color picker"
               >
                 <X size={14} aria-hidden="true" />
@@ -357,7 +370,7 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
           </div>
 
           {/* Hex field — label inside */}
-          <div className="relative field px-4 py-3 mb-4">
+          <div className="relative field hex-field-wrapper px-4 py-3 mb-4">
             <div className="label mb-1">Hex</div>
             <div className="flex items-center gap-1.5 pr-14">
               <span className="mono text-[15px]" style={{ color: "#6B6557" }}>#</span>
@@ -419,20 +432,24 @@ export default function ColorPickerSheet({ isOpen, onClose, onColorPick, onMatch
               aria-valuemax={360}
               aria-valuenow={hue}
               tabIndex={0}
-              className="relative h-3 rounded-md overflow-hidden cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1"
+              className="relative h-3 rounded-md cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1"
               style={{
                 background: "linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)",
                 boxShadow: "inset 0 0 0 1px rgba(25,22,19,0.08)",
               }}
             >
               <div
-                className="absolute top-1/2 w-3 h-3 rounded-full bg-white pointer-events-none"
+                className="absolute top-1/2 w-5 h-5 rounded-full bg-white pointer-events-none"
                 style={{
                   left: `${(hue / 360) * 100}%`,
                   transform: "translate(-50%, -50%)",
                   boxShadow: "0 0 0 1px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2)",
                 }}
-              />
+              >
+                {!pickedColor && (
+                  <span className="hue-pulse-ring" key={pulseKey} aria-hidden="true" />
+                )}
+              </div>
             </div>
           </div>
 

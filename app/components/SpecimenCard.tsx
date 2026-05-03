@@ -41,7 +41,7 @@ export default function SpecimenCard({ type, data, index }: SpecimenCardProps) {
 
   return (
     <div
-      className="card-enter col-span-12 md:col-span-6 rounded-[14px] bg-surface overflow-hidden"
+      className="card-enter col-span-12 md:col-span-6 rounded-[14px] bg-surface"
       style={{
         boxShadow: "0 1px 0 rgba(25,22,19,0.04), 0 1px 2px rgba(25,22,19,0.05), 0 8px 16px -10px rgba(25,22,19,0.10)",
         animationDelay: `${index * 80}ms`,
@@ -62,9 +62,7 @@ export default function SpecimenCard({ type, data, index }: SpecimenCardProps) {
                 ΔE {data.deltaE.toFixed(1)}
               </span>
               <div className="de-tooltip-content" role="tooltip">
-                Color distance from your pick (ΔE 2000).
-                <br />Lower = closer match.
-                <br />&lt;2 imperceptible · ≤10 within tolerance · &gt;10 outside range
+                Color distance · ≤10 in tolerance · lower = closer
               </div>
             </div>
             <a

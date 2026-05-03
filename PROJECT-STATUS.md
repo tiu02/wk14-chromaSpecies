@@ -33,7 +33,7 @@
 - **`app/globals.css`** — added: `@keyframes card-enter` (translateY 8px→0, opacity, 280ms); `.card-enter` class; `@keyframes shimmer` (translateX sweep, 1.4s linear); `.skeleton-shimmer` + `::after` pseudo for shimmer overlay; `@keyframes btn-pulse` (opacity 60–100%, 600ms); `.btn-loading` class; `prefers-reduced-motion` overrides for all three animations
 - **Build** — `npm run build` clean; TypeScript passes; all routes compile
 
-### ColorPickerSheet UI Pass — This Session: Complete
+### ColorPickerSheet UI Pass (pre-Commit 6): Complete
 - **Icons** — `lucide-react` installed; replaced all custom SVGs with `Shuffle`, `Pipette`, `ChevronDown`, `X` from lucide-react (consistent 1.5px stroke, tree-shakeable)
 - **Hex field** — "Hex" label moved inside the `.field` div (stacked label/input pattern matching channel cards); color swatch repositioned `absolute right-4 top-1/2 -translate-y-1/2` (40×40px) so it stays vertically centered regardless of label height; `pr-14` added to input row to prevent text overlap
 - **Format control** — replaced click-to-cycle button with custom-styled dropdown: `.field` trigger with `ChevronDown` (rotates 180° on open), white popover with `E7E3D9` border and elevation shadow, `.format-option` CSS class with 80ms hover transition, `ECE7DA` selected state; closes on outside click and Escape
@@ -43,7 +43,7 @@
 - **Hue strip labels** — removed `0°` / `drag the marker to set hue` / `360°` label row
 - **Build** — `npm run build` clean; `tsc --noEmit` clean; TypeScript passes
 
-### UX Fixes (post-Commit 5, this session): Complete
+### UX Fixes (pre-Commit 6): Complete
 - **Tooltip** — replaced `title` attribute on ΔE pill with `.de-tooltip` / `.de-tooltip-content` CSS class pair; triggers on hover and `:focus-within`; 120ms opacity transition; `role="tooltip"` on content div
 - **ΔE tooltip copy** — updated to "Lower = closer match · <2 imperceptible · ≤10 within tolerance · >10 outside range"
 - **Status sub-text** — `D65 · 2° · ΔE tolerance 10` → `Daylight D65 · 2° observer · max ΔE 10`; `title` attribute on element with full technical expansion on hover
@@ -51,10 +51,16 @@
 - **"verified" pill** — now conditional: `"within tolerance"` (standard pill) when `deltaE ≤ 10`; `"outside tolerance"` (muted style, `--color-ink-3` text) when not
 - **Build** — `npm run build` clean; TypeScript passes
 
+### A11y + Motion Polish — Commit 6: Complete
+- **`app/globals.css`** — added: `.swatch-tile:focus-visible` and `.swatch-trigger:focus-visible` outline rings (2px solid ink, 2px offset); `.btn-icon` base class with transition + `.btn-icon:active { scale(0.93) }` (distinct from `.btn-secondary` scale 0.98); `@keyframes hue-pulse` (scale 1→1.8, opacity 0.5→0) + `.hue-pulse-ring` class (3 iterations, ease-in-out, `forwards` fill-mode, EMPTY state only); `@keyframes skeleton-pulse` (opacity 0.6→1 fallback); expanded `prefers-reduced-motion` block to cover sheet (`.sheet-panel`), backdrop (`.sheet-backdrop`), pulse ring (animation none), swatch tile (transition none), and shimmer (opacity pulse instead of sweep); `.format-option:focus-visible` ring (2px solid ink, -2px inset offset); `.hex-field-wrapper:focus-within` ring (2px solid ink, keyboard focus for hex input container)
+- **`app/components/ColorPickerSheet.tsx`** — added: `pulseKey` state (increments on each sheet open to restart pulse ring); `willChange` state (true on open/close intent, false on `transitionend` via `onTransitionEnd` handler) guarded by `hasBeenOpenedRef` (prevents GPU layer leak on page load); `sheet-backdrop` class + `ease-out` easing (was `ease`); `sheet-panel` class + `willChange: willChange ? "transform" : "auto"` inline style + `onTransitionEnd` handler; hue strip thumb `w-3 h-3` → `w-5 h-5` (12→20px, spec minimum); `overflow-hidden` removed from hue strip container (was clipping 20px thumb and pulse ring to 12px track height); icon buttons (Pick/Shuffle/Close) now have `btn-icon min-w-11 min-h-11` (44×44 touch target); pulse ring `<span className="hue-pulse-ring" key={pulseKey} aria-hidden="true">` inside thumb, rendered only when `!pickedColor`; `hex-field-wrapper` class on hex input container
+- **`app/components/SpecimenCard.tsx`** — removed `overflow-hidden` from card root (was clipping absolutely-positioned `.de-tooltip-content`); shortened ΔE tooltip to single line: `"Color distance · ≤10 in tolerance · lower = closer"`
+- **Build** — `npm run build` clean; TypeScript passes
+
 --
 
 # Known Issues
-- HSL plane gradient only adjusts lightness axis; a full SL-plane gradient (black/white corners) is not yet implemented. Color accuracy is approximate — correctable in Commit 6 polish pass if needed.
+- HSL plane gradient only adjusts lightness axis; a full SL-plane gradient (black/white corners) is not yet implemented. Color accuracy is approximate.
 - `format` dropdown: RGB/HSL/HSB values are read-only display (derived from HSL state). Hex input is the authoritative editing field. This matches spec intent.
 - `RESPONSE_SCHEMA` uses `as any` cast to satisfy strict TypeScript typing in the `@google/generative-ai` 0.24.1 SDK — the literal schema object is otherwise typed as `readonly` and conflicts with the mutable `string[]` required by the SDK's `ObjectSchema.required` field.
 - **Blue hue mismatch (partial fix):** System prompt tightened + blue few-shot example added. However, ΔE validation checks Gemini's self-reported `dominantHex`, not the specimen's actual visual color — if Gemini misreports `dominantHex`, validation passes even for a wrong match. Prompt-level mitigation only; full fix would require server-side image color analysis.
@@ -62,4 +68,4 @@
 --
 
 ## Next Steps
-1. Start Commit 6: A11y + Motion Polish.
+1. Start Commit 7: Mobile sweep, README, Deploy.
