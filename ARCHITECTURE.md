@@ -20,7 +20,13 @@
 - `postcss.config.mjs` — PostCSS config: `@tailwindcss/postcss` plugin only.
 - `next.config.ts` — Next.js config (default, no custom settings).
 - `.env.local` — `GEMINI_API_KEY` (server-only; never `NEXT_PUBLIC_`; gitignored).
-- `package.json` — Dependencies: `next`, `react`, `react-dom`, `@google/generative-ai`, `chroma-js`, `lucide-react`. DevDeps: `tailwindcss`, `@tailwindcss/postcss`, `@types/chroma-js`, TypeScript, ESLint.
+- `app/lib/color-utils.ts` — Shared pure-function utilities. Exports: `hexToHSL`, `hslToHex`, `hue2rgb`, `hslToHSB`, `hexToRgb` (returns `{r,g,b}` object), `validateDeltaE`, `SpecimenData` interface. Used by `ColorPickerSheet.tsx` and `route.ts`. Note: `SpecimenCard.tsx` has its own local `hexToRgb` that returns an `"r g b"` CSS string — different signature, not shared.
+- `vitest.config.mts` — Vitest config: `environment: jsdom`, `resolve: { tsconfigPaths: true }`, `setupFiles: ['./vitest.setup.ts']`.
+- `vitest.setup.ts` — RTL `afterEach(cleanup)` to tear down the DOM between tests.
+- `__tests__/color-utils.test.ts` — Unit tests for pure color conversion functions (19 tests).
+- `__tests__/validateDeltaE.test.ts` — Unit tests for ΔE threshold branching (5 tests).
+- `__tests__/SpecimenCard.test.tsx` — RTL component tests for SpecimenCard render behavior (10 tests).
+- `package.json` — Dependencies: `next`, `react`, `react-dom`, `@google/generative-ai`, `chroma-js`, `lucide-react`. DevDeps: `tailwindcss`, `@tailwindcss/postcss`, `@types/chroma-js`, TypeScript, ESLint, `vitest`, `@vitejs/plugin-react`, `jsdom`, `@testing-library/react`, `@testing-library/dom`.
 
 ## Data Model
 

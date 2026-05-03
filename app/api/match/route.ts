@@ -1,8 +1,6 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
-import chroma from 'chroma-js';
-
-const DELTA_E_THRESHOLD = 10;
+import { validateDeltaE, type SpecimenData } from '../../lib/color-utils';
 
 const SYSTEM_PROMPT = `You are a naturalist researcher cross-referencing color science with biological taxonomy.
 Given a target hex color, identify one botanical specimen (flower, plant, or moss) and one
@@ -153,17 +151,6 @@ const RESPONSE_SCHEMA = {
   required: ['botanical', 'zoological'],
 };
 
-interface SpecimenData {
-  commonName: string;
-  scientificName: string;
-  family: string;
-  description: string;
-  funFact: string;
-  dominantHex: string;
-  deltaE: number;
-  wikiTitle: string;
-}
-
 interface SpecimenWithImage extends SpecimenData {
   imageUrl: string | null;
 }
@@ -174,12 +161,12 @@ interface MatchResponse {
   error?: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
 const model = genAI.getGenerativeModel({
   model: 'gemini-2.5-flash',
   generationConfig: {
     responseMimeType: 'application/json',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     responseSchema: RESPONSE_SCHEMA as any,
   },
   systemInstruction: SYSTEM_PROMPT,
@@ -202,15 +189,6 @@ async function fetchWikiThumbnail(wikiTitle: string): Promise<string | null> {
   }
 }
 
-function validateDeltaE(
-  targetHex: string,
-  botanical: SpecimenData,
-  zoological: SpecimenData,
-): { valid: boolean; bDE: number; zDE: number } {
-  const bDE = chroma.deltaE(targetHex, botanical.dominantHex);
-  const zDE = chroma.deltaE(targetHex, zoological.dominantHex);
-  return { valid: bDE <= DELTA_E_THRESHOLD && zDE <= DELTA_E_THRESHOLD, bDE, zDE };
-}
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -240,10 +218,10 @@ export async function POST(request: Request): Promise<Response> {
     const { valid, bDE, zDE } = validateDeltaE(hex, parsed.botanical, parsed.zoological);
     if (!valid) {
       const violations = [
-        bDE > DELTA_E_THRESHOLD
+        bDE > 10
           ? `Botanical dominant color ${parsed.botanical.dominantHex} has ΔE ${bDE.toFixed(1)} from target — exceeds tolerance. Find a closer botanical match.`
           : '',
-        zDE > DELTA_E_THRESHOLD
+        zDE > 10
           ? `Zoological dominant color ${parsed.zoological.dominantHex} has ΔE ${zDE.toFixed(1)} from target — exceeds tolerance. Find a closer zoological match.`
           : '',
       ].filter(Boolean).join(' ');

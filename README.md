@@ -1,9 +1,10 @@
 # Chroma Specimen
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/BADGE-ID/deploy-status)](https://app.netlify.com/sites/color-match/deploys)
-[![GitHub](https://img.shields.io/badge/github-tiu02%2Fcolor--match-blue?logo=github)](https://github.com/tiu02/color-match)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/5e434643-abb7-4dff-910a-a92bcfe7558b/deploy-status)](https://app.netlify.com/sites/chroma-specimens/deploys)
+[![Tests](https://img.shields.io/badge/tests-34%20passing-brightgreen)](/__tests__)
+[![GitHub](https://img.shields.io/badge/github-tiu02%2Fwk14--chromaSpecies-blue?logo=github)](https://github.com/tiu02/wk14-chromaSpecies)
 
-**Live Demo:** [color-match.netlify.app](https://color-match.netlify.app)
+**Live Demo:** [chroma-specimens.netlify.app](https://chroma-specimens.netlify.app)
 
 ## Project Description
 Color Match is a a custom color matcher tool that matches one animal with one plant using dominant chromatic value that falls within tolerance (ΔE 2000 ≤ 10). Users pick a hue from the custom color picker or paste a hex code, the server calls Gemini 2.5 Flash, validates the color distance, and fetches real Wikipedia photos.
@@ -30,7 +31,8 @@ The prompt constants are readable at [`app/api/match/route.ts`](app/api/match/ro
 - **Icons:** `lucide-react` (Shuffle, Pipette, ChevronDown, X — tree-shakeable)
 - **External API:** Wikipedia REST API v1 (`/page/summary/{title}` — no key required)
 - **Deployment:** Netlify + `@netlify/plugin-nextjs`
-- **AI Dev Tool:** Claude Code (VSCode Extension)
+- **Testing:** Vitest 4.1.5 + React Testing Library — 34 unit/component tests (`npm test`)
+- **AI Dev Tool:** Claude Code (VSCode Extension) — used for all phases: architecture, component development, test suite setup, and security review
 
 ## Setup Instructions
 ### Prerequisites
@@ -41,8 +43,8 @@ The prompt constants are readable at [`app/api/match/route.ts`](app/api/match/ro
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/tiu02/color-match
-   cd color-match
+   git clone https://github.com/tiu02/wk14-chromaSpecies
+   cd wk14-chromaSpecies
    ```
 
 2. Install dependencies:
@@ -61,7 +63,12 @@ The prompt constants are readable at [`app/api/match/route.ts`](app/api/match/ro
    ```
    Open [localhost:3000](http://localhost:3000).
 
-5. Test the API route directly:
+5. Run the test suite:
+   ```bash
+   npm test -- --run
+   ```
+
+6. Test the API route directly:
    ```bash
    curl -X POST http://localhost:3000/api/match \
      -H "Content-Type: application/json" \
@@ -87,6 +94,6 @@ The `@netlify/plugin-nextjs` adapter is auto-detected from `package.json`. Befor
 - I was originally goijng to make a design brief tool that generated based off user's prompting, but then realized there are already alot of projects like this being built. I got inspired by seeing this social media post of wildlife photography, comparing birds to flowers (specifically a blue pansy flower to a fairywren bird). I'm also a nature lover who's an artist, so I know others like be will gain much inspiration from this, as well as science lovers with the specimen cards.
 
 ## What I'd Change
-- Add server-side image color analysis (dominant color extraction from the Wikipedia thumbnail) as a second validation layer, so `dominantHex` accuracy doesn't depend solely on Gemini's self-report.
-- Cache responses by hex bucket (e.g., round to nearest 5° hue) to avoid duplicate Gemini calls for near-identical inputs.
-- Tighten the ΔE threshold to ≤ 7 with a smarter retry strategy — provide Gemini with the actual computed ΔE values, not just a pass/fail flag, so the correction prompt is more precise.
+- I would add server-side image analysis as a second validation layer. Currently, I rely on Gemini's reported dominant color, but extracting it from the specimen photo itself would eliminate hallucination.
+- I would also lower the ΔE threshold from ≤10 to ≤7 for better precision, as that is what I am currently lacking for this tool. The higher tolerance increases match range but reduces match accuracy. A precision-focused mode with stricter thresholds would let improve the experience.
+- Also adding another image database to search, such as Unsplash or Pexels will give a wider range of specimens to match than just using Wikipedia.

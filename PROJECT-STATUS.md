@@ -57,6 +57,19 @@
 - **`app/components/SpecimenCard.tsx`** — removed `overflow-hidden` from card root (was clipping absolutely-positioned `.de-tooltip-content`); shortened ΔE tooltip to single line: `"Color distance · ≤10 in tolerance · lower = closer"`
 - **Build** — `npm run build` clean; TypeScript passes
 
+### Vitest Test Suite — Session 10: Complete
+- **Vitest 4.1.5** installed with `@vitejs/plugin-react`, `jsdom`, `@testing-library/react`, `@testing-library/dom`; `vite-tsconfig-paths` replaced with native `resolve: { tsconfigPaths: true }`
+- **`vitest.config.mts`** — `environment: jsdom`, `setupFiles: ['./vitest.setup.ts']`
+- **`vitest.setup.ts`** — `afterEach(cleanup)` for RTL DOM teardown between tests
+- **`app/lib/color-utils.ts`** — new shared utility; extracted `hexToHSL`, `hslToHex`, `hue2rgb`, `hslToHSB`, `hexToRgb` (object form) from `ColorPickerSheet.tsx`; extracted `validateDeltaE` and `SpecimenData` interface from `route.ts`; all exported
+- **`ColorPickerSheet.tsx`** — updated to import from `app/lib/color-utils.ts`; local function bodies removed
+- **`route.ts`** — updated to import `validateDeltaE` + `SpecimenData` from `app/lib/color-utils.ts`; local `SpecimenData` interface, `validateDeltaE` function, `chroma` import, and `DELTA_E_THRESHOLD` constant removed; `eslint-disable` comment moved inline above `as any` cast
+- **`__tests__/color-utils.test.ts`** — 19 unit tests: `hexToHSL` (6 cases: pure red/green/blue, white, black, default gray), `hslToHex` (4 cases: pure red, white, black, round-trip), `hslToHSB` (4 cases), `hexToRgb` (5 cases)
+- **`__tests__/validateDeltaE.test.ts`** — 5 tests: both within threshold, botanical out, zoological out, both out, exact match (ΔE = 0)
+- **`__tests__/SpecimenCard.test.tsx`** — 10 tests: common name, ΔE pill value, within/outside tolerance, boundary at exactly 10, fallback image, image renders, Botanical/Zoological labels, fallback card ID for index ≥ 2
+- **`README.md`** — `[![Tests](https://img.shields.io/badge/tests-34%20passing-brightgreen)]` badge added
+- **Result** — 34/34 passing; `npm test -- --run` exits 0
+
 --
 
 # Known Issues
@@ -68,4 +81,4 @@
 --
 
 ## Next Steps
-1. Start Commit 7: Mobile sweep, README, Deploy.
+1. N/A
